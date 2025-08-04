@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>US ZIP Radius Finder</title>
+  <style>
+    body { font-family: Arial,sans-serif; max-width:600px; margin:2rem auto; }
+    input, button { padding:0.5rem; margin:0.2rem; width:calc(50% - 1rem); }
+    table { border-collapse: collapse; width:100%; margin-top:1rem; }
+    th, td { border:1px solid #ddd; padding:0.5rem; text-align:left; }
+    th { background:#f4f4f4; }
+  </style>
+</head>
+<body>
+  <h1>US ZIP Radius Finder</h1>
+  <div>
+    <input id="centerZip" type="text" placeholder="Enter ZIP code" />
+    <input id="radius"  type="number" placeholder="Radius (miles)" />
+    <button onclick="findZips()">Find</button>
+  </div>
+  <div id="output"></div>
+
+  <!-- full-US ZIP data -->
+  <script src="zipData.js"></script>
+
+  <script>
+    function toRad(deg){ return deg*Math.PI/180; }
+    function dist(lat1,lon1,lat2,lon2){
+      const R=3958.8, dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
+      const a = Math.sin(dLat/2)**2 +
+                Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*
+                Math.sin(dLon/2)**2;
+      return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    }
+    function findZips(){
+      const z = document.getElementById('centerZip').value.trim(),
+            r = parseFloat(document.getElementById('radius').value);
+      if(!zipData[z]||isNaN(r)){ alert('Invalid ZIP or radius'); return; }
+      const [lat0,lon0] = [zipData[z].lat, zipData[z].lng],
+            rows = Object.entries(zipData)
+              .map(([zip,loc])=>{
+                const d=dist(lat0,lon0,loc.lat,loc.lng);
+                return {zip,d};
+              })
+              .filter(o=>o.d<=r)
+              .sort((a,b)=>a.d-b.d);
+
+      if(!rows.length){
+        document.getElementById('output').innerHTML='<p>No ZIPs found.</p>';
+        return;
+      }
+      let html = '<table><tr><th>ZIP</th><th>Distance (mi)</th></tr>';
+      rows.forEach(o=>
+        html+=`<tr><td>${o.zip}</td><td>${o.d.toFixed(2)}</td></tr>`
+      );
+      html+='</table>';
+      document.getElementById('output').innerHTML=html;
+    }
+  </script>
+</body>
+</html>
